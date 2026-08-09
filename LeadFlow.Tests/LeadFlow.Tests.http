@@ -1,0 +1,6 @@
+@LeadFlow.Tests_HostAddress = http://localhost:5110
+
+GET {{LeadFlow.Tests_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
