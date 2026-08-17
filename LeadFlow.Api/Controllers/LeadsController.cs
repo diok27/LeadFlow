@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using LeadFlow.Api.Models;
+using LeadFlow.Api.Services;
+using LeadFlow.Api.DTOs;
+using LeadFlow.Api.LeadMappers;
 
 namespace LeadFlow.Api.Controllers;
 
@@ -7,96 +10,74 @@ namespace LeadFlow.Api.Controllers;
 [Route("api/leads")]
 public class LeadsController : ControllerBase
 {
-    private static readonly List<Lead> _leads = new()
-    {
-        new Lead
-        {
-            Id = 1,
-            FirstName = "Ali",
-            LastName = "Karimov",
-            Status = LeadStatus.New,
-            Source = LeadSource.Website,
-            CreatedAt = DateTime.UtcNow
-        },
+    private readonly ILeadService _leadsService;
 
-        new Lead
-        {
-            Id = 2,
-            FirstName = "Diyor",
-            LastName = "Tursunov",
-            Status = LeadStatus.Contacted,
-            Source = LeadSource.ColdCall,
-            CreatedAt = DateTime.UtcNow.AddHours(-2)
-        },
-    };
-    private static int _nextId = 3;
+    public LeadsController(ILeadService leadService)
+    {
+        _leadsService = leadService;
+    }
 
     [HttpGet]
-    public IActionResult GetAll()
+    public async Task<IActionResult> GetAll()
     {
-        return Ok(_leads);
+     var leads = await _leadsService.GetAllAsync();
+     var mapped = leads.Select(lead => lead.ToResponse()).ToList();
+     return Ok(mapped);
     }
 
     [HttpGet("{id}")]
-    public IActionResult GetById(int id)
+    public async Task<IActionResult> GetById(int id)
     {
-        Lead? existingLead = _leads.FirstOrDefault(lead => lead.Id == id);
+        var lead = await _leadsService.GetByIdAsync(id);
 
-        if (existingLead == null)
+
+        if (lead == null)
         {
             return NotFound();
         }
         else
         {
-            return Ok(existingLead);
+
+            return Ok(lead.ToResponse());
         }
     }
 
     [HttpPost]
-    public IActionResult Create([FromBody] Lead lead)
+    public async Task<IActionResult> Create([FromBody] CreateLeadRequest request)
     {
-        lead.Id = _nextId++;
-        lead.CreatedAt = DateTime.UtcNow;
+        var lead = request.ToEntity();
+        var created  = await _leadsService.CreateAsync(lead);
 
-         _leads.Add(lead);
-
-         return CreatedAtAction(nameof(GetById), new { id = lead.Id }, lead);
+         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created.ToResponse());
     }
 
     [HttpPut("{id}")]
-    public IActionResult Update(int id, Lead updated)
+    public async Task <IActionResult> Update(int id, UpdateLeadRequest request)
     {
-       Lead? existingLead = _leads.FirstOrDefault(lead => lead.Id == id);
-
-       if (existingLead == null)
-       {
-           return NotFound();
-       }
-       else
-       {
-           existingLead.FirstName = updated.FirstName;
-           existingLead.LastName = updated.LastName;
-           existingLead.Phone = updated.Phone;
-           existingLead.Email = updated.Email;
-           existingLead.UpdatedAt = DateTime.UtcNow;
-           existingLead.Status = updated.Status;
-           existingLead.Source = updated.Source;
-           return NoContent();
-       }
-    }
-
-    [HttpDelete("{id}")]
-    public IActionResult Delete(int id)
-    {
-        Lead? existingLead = _leads.FirstOrDefault(lead => lead.Id == id);
-
-        if (existingLead == null)
+        var lead = new Lead();
+        request.ApplyTo(lead);
+        var updated = await _leadsService.UpdateAsync(id, lead);
+        if (updated == null)
         {
             return NotFound();
         }
         else
         {
-            _leads.Remove(existingLead);
+            return Ok(updated.ToResponse());
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task <IActionResult> Delete(int id)
+    {
+        var deletedLead = await _leadsService.DeleteAsync(id);
+
+        if (deletedLead == null)
+        {
+            return NotFound();
+        }
+        else
+        {
             return NoContent();
         }
     }
