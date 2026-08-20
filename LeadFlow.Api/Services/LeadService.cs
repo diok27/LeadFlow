@@ -1,3 +1,5 @@
+using LeadFlow.Api.Exceptions;
+
 namespace LeadFlow.Api.Services;
 using LeadFlow.Api.Models;
 
@@ -41,7 +43,7 @@ public class LeadService : ILeadService
 
         if (existingLead == null)
         {
-            return Task.FromResult<Lead?>(null);
+            throw new NotFoundException($"Lead with id {id} was not found");
         }
         else
         {

@@ -29,17 +29,7 @@ public class LeadsController : ControllerBase
     public async Task<IActionResult> GetById(int id)
     {
         var lead = await _leadsService.GetByIdAsync(id);
-
-
-        if (lead == null)
-        {
-            return NotFound();
-        }
-        else
-        {
-
             return Ok(lead.ToResponse());
-        }
     }
 
     [HttpPost]
